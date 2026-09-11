@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "globset"
+version = "0.1.0"
+description = "Match paths against a set of gitignore-style glob patterns"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "wary-willow" }]
+
+[tool.setuptools.packages.find]
+where = ["src"]
