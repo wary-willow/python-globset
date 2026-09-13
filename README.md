@@ -58,9 +58,9 @@ regex.match("src/a/b/mod.py") is not None  # True
 
 ## Status
 
-Early. The matching engine works and is covered by the examples above;
-error messages for malformed patterns, a proper test suite, and
-performance work on large pattern lists are still to come.
+Early. The matching engine works and is covered by `tests/test_globset.py`;
+error messages for malformed patterns and performance work on large
+pattern lists are still to come.
 
 ## License
 
