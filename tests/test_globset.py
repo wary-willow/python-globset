@@ -1,6 +1,6 @@
 import unittest
 
-from globset import GlobSet, compile_pattern
+from globset import GlobSet, GlobSetError, compile_pattern
 
 
 class TranslateStarTests(unittest.TestCase):
@@ -75,6 +75,34 @@ class BraceExpansionTests(unittest.TestCase):
         self.assertIsNotNone(regex.match("src/a/mod.py"))
         self.assertIsNotNone(regex.match("src/b/sub/mod.py"))
         self.assertIsNone(regex.match("src/c/mod.py"))
+
+
+class MalformedPatternTests(unittest.TestCase):
+    def test_unclosed_brace_raises(self):
+        with self.assertRaises(GlobSetError):
+            compile_pattern("*.{py,js")
+
+    def test_unclosed_brace_message_names_pattern(self):
+        try:
+            compile_pattern("src/{a,b")
+        except GlobSetError as exc:
+            self.assertIn("src/{a,b", str(exc))
+        else:
+            self.fail("expected GlobSetError")
+
+    def test_bad_character_range_raises(self):
+        with self.assertRaises(GlobSetError):
+            compile_pattern("[z-a].py")
+
+    def test_unclosed_class_still_treated_as_literal(self):
+        # unlike an unclosed brace, this is an existing, deliberate
+        # fallback in translate() and must not start raising.
+        regex = compile_pattern("[abc")
+        self.assertIsNotNone(regex.match("[abc"))
+
+    def test_globset_construction_propagates_error(self):
+        with self.assertRaises(GlobSetError):
+            GlobSet(["*.py", "*.{js,ts"])
 
 
 class GlobSetTests(unittest.TestCase):

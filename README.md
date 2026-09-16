@@ -56,11 +56,23 @@ regex = compile_pattern("src/**/*.py")
 regex.match("src/a/b/mod.py") is not None  # True
 ```
 
+A malformed pattern - an unclosed `{brace}` group, or a character class
+with a bad range like `[z-a]` - raises `GlobSetError` at compile time
+instead of silently compiling into something that never matches:
+
+```python
+from globset import GlobSet, GlobSetError
+
+try:
+    GlobSet(["*.{py,js"])
+except GlobSetError as exc:
+    print(exc)  # unclosed brace in pattern '*.{py,js': ...
+```
+
 ## Status
 
 Early. The matching engine works and is covered by `tests/test_globset.py`;
-error messages for malformed patterns and performance work on large
-pattern lists are still to come.
+performance work on large pattern lists is still to come.
 
 ## License
 

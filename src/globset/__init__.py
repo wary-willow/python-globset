@@ -11,7 +11,17 @@ last wins. That's the same resolution order git uses for .gitignore.
 import re
 from typing import Iterable, List, Pattern, Tuple
 
-__all__ = ["GlobSet", "translate", "compile_pattern"]
+__all__ = ["GlobSet", "GlobSetError", "translate", "compile_pattern"]
+
+
+class GlobSetError(ValueError):
+    """Raised when a pattern can't be turned into a matcher.
+
+    Before this existed, a typo like a missing '}' just compiled into a
+    regex that matched the literal '{' and quietly matched nothing on
+    real paths - the kind of bug you only notice once files you expected
+    to be filtered slip through. Better to fail at compile time.
+    """
 
 
 def _expand_braces(pattern: str) -> List[str]:
@@ -28,7 +38,10 @@ def _expand_braces(pattern: str) -> List[str]:
         return [pattern]
     end = pattern.find("}", start)
     if end == -1:
-        return [pattern]
+        raise GlobSetError(
+            f"unclosed brace in pattern {pattern!r}: "
+            f"'{{' at index {start} has no matching '}}'"
+        )
     prefix = pattern[:start]
     suffix = pattern[end + 1 :]
     options = pattern[start + 1 : end].split(",")
@@ -83,11 +96,19 @@ def translate(pattern: str) -> str:
 
 
 def compile_pattern(pattern: str, case_sensitive: bool = True) -> Pattern[str]:
-    """Compile one glob pattern (braces allowed) into an anchored regex."""
+    """Compile one glob pattern (braces allowed) into an anchored regex.
+
+    Raises GlobSetError if the pattern can't be compiled, e.g. an
+    unclosed brace group or a character class with a bad range like
+    "[z-a]". Unclosed "[" is not an error - see translate().
+    """
     alternatives = _expand_braces(pattern)
     body = "|".join(f"(?:{translate(alt)})" for alt in alternatives)
     flags = 0 if case_sensitive else re.IGNORECASE
-    return re.compile(rf"(?s)\A(?:{body})\Z", flags)
+    try:
+        return re.compile(rf"(?s)\A(?:{body})\Z", flags)
+    except re.error as exc:
+        raise GlobSetError(f"invalid pattern {pattern!r}: {exc}") from exc
 
 
 class GlobSet:
@@ -97,6 +118,8 @@ class GlobSet:
     negates the match. The last pattern that matches a given path -
     positive or negative - decides the outcome, mirroring how git
     resolves overlapping ignore rules.
+
+    Raises GlobSetError if any pattern is malformed (see compile_pattern).
 
     >>> gs = GlobSet(["*.py", "!test_*.py"])
     >>> gs.match("app.py")
