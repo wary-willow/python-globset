@@ -11,7 +11,7 @@ last wins. That's the same resolution order git uses for .gitignore.
 import re
 from typing import Iterable, List, Pattern, Tuple
 
-__all__ = ["GlobSet", "GlobSetError", "translate", "compile_pattern"]
+__all__ = ["GlobSet", "GlobSetError", "translate", "compile_pattern", "match_many"]
 
 
 class GlobSetError(ValueError):
@@ -150,3 +150,17 @@ class GlobSet:
         for path in paths:
             if self.match(path):
                 yield path
+
+
+def match_many(path: str, globsets: Iterable[GlobSet]) -> List[bool]:
+    """Test one path against several GlobSets, returning one bool per set.
+
+    Results are in the same order as `globsets`. Each set resolves its
+    own rules independently; nothing carries over between them. The path
+    is normalized once here instead of once per set.
+
+    >>> match_many("app.py", [GlobSet(["*.py"]), GlobSet(["*.js"])])
+    [True, False]
+    """
+    path = path.replace("\\", "/")
+    return [gs.match(path) for gs in globsets]

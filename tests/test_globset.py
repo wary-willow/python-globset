@@ -1,6 +1,6 @@
 import unittest
 
-from globset import GlobSet, GlobSetError, compile_pattern
+from globset import GlobSet, GlobSetError, compile_pattern, match_many
 
 
 class TranslateStarTests(unittest.TestCase):
@@ -132,6 +132,26 @@ class GlobSetTests(unittest.TestCase):
         gs = GlobSet(["*.py", "!test_*.py"])
         paths = ["test_a.py", "a.py", "notes.txt", "b.py"]
         self.assertEqual(list(gs.filter(paths)), ["a.py", "b.py"])
+
+
+class MatchManyTests(unittest.TestCase):
+    def test_returns_one_result_per_set_in_order(self):
+        sets = [GlobSet(["*.py"]), GlobSet(["*.js"]), GlobSet(["*.py", "!a.py"])]
+        self.assertEqual(match_many("a.py", sets), [True, False, False])
+
+    def test_accepts_any_iterable(self):
+        sets = (gs for gs in [GlobSet(["*.py"]), GlobSet(["*.txt"])])
+        self.assertEqual(match_many("a.txt", sets), [False, True])
+
+    def test_no_sets_gives_empty_list(self):
+        self.assertEqual(match_many("a.py", []), [])
+
+    def test_backslashes_are_normalized(self):
+        self.assertEqual(match_many("a\\b.py", [GlobSet(["a/b.py"])]), [True])
+
+    def test_each_set_keeps_its_own_case_setting(self):
+        sets = [GlobSet(["*.PY"]), GlobSet(["*.PY"], case_sensitive=False)]
+        self.assertEqual(match_many("app.py", sets), [False, True])
 
 
 if __name__ == "__main__":

@@ -46,6 +46,18 @@ Patterns support the glob syntax you'd expect:
 Matching is case-sensitive by default; pass `case_sensitive=False` to
 `GlobSet(...)` for case-insensitive filesystems.
 
+To test one path against several sets at once, use `match_many`. It
+returns a list of booleans, one per set, in the order you passed them:
+
+```python
+from globset import GlobSet, match_many
+
+sources = GlobSet(["*.py", "!test_*.py"])
+tests = GlobSet(["test_*.py"])
+
+match_many("test_app.py", [sources, tests])  # [False, True]
+```
+
 If you only need a single pattern compiled to a regex, `compile_pattern`
 is exposed directly:
 
